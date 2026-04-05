@@ -4,6 +4,8 @@ import os
 
 from flask import Flask, render_template
 
+from .api import register_api
+
 _ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 app = Flask(
@@ -12,6 +14,8 @@ app = Flask(
     static_folder=os.path.join(_ROOT, "static"),
     static_url_path="/static",
 )
+
+register_api(app)
 
 
 @app.route("/")
