@@ -271,8 +271,6 @@ class WerewolfGame:
 
         white_alive = any(p.role == Role.WHITE_HAT and not p.eliminated for p in self.players)
         black_alive = any(p.role == Role.BLACK_HAT and not p.eliminated for p in self.players)
-        company_alive = any(p.role == Role.COMPANY and not p.eliminated for p in self.players)
-        gray_alive = any(p.role == Role.GRAY_HAT and not p.eliminated for p in self.players)
 
         if resolved > half:
             self.winner = "Company & White hats (majority of vulnerabilities resolved)"
@@ -288,10 +286,6 @@ class WerewolfGame:
             return
         if not white_alive:
             self.winner = "Black hats (White hats eliminated)"
-            self.phase = Phase.GAME_OVER
-            return
-        if gray_alive and (resolved > half or exploited > half):
-            self.winner = "Gray hats (aligned objective achieved)"
             self.phase = Phase.GAME_OVER
 
     def apply_action(self, pid: int, action: dict[str, Any]) -> tuple[bool, str]:
