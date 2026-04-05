@@ -8,7 +8,6 @@ import uuid
 from typing import Any
 
 from .constants import (
-    COMPANY_POOL,
     DEFENSIVE_CARDS,
     MAX_HAND,
     NEUTRAL_ALL_IN,
@@ -45,29 +44,21 @@ def build_main_deck(rng: random.Random) -> list[str]:
 
 
 def roll_roles(player_count: int, rng: random.Random) -> list[Role]:
-    """Assign exactly one Company and fill other seats per rule book."""
+    """At least one White hat, Black hat, and Gray hat; remaining seats random among the three."""
     if player_count < 3:
         raise ValueError("Need at least 3 players.")
 
-    roles: list[Role] = [Role.COMPANY]
-    remaining = player_count - 1
-    if player_count >= 5:
-        roles.append(Role.GRAY_HAT)
-        remaining -= 1
-    for i in range(remaining):
-        if player_count > 5:
-            roles.append(rng.choice([Role.WHITE_HAT, Role.BLACK_HAT]))
-        else:
-            roles.append(Role.WHITE_HAT if i % 2 == 0 else Role.BLACK_HAT)
+    roles: list[Role] = [Role.WHITE_HAT, Role.BLACK_HAT, Role.GRAY_HAT]
+    for _ in range(player_count - 3):
+        roles.append(rng.choice((Role.WHITE_HAT, Role.BLACK_HAT, Role.GRAY_HAT)))
     rng.shuffle(roles)
     return roles
 
 
-def company_scale(player_count: int) -> tuple[int, int]:
-    """Returns (vulnerability_count, company_special_cards)."""
+def vuln_scale(player_count: int) -> int:
     if player_count < 5:
-        return 3, 3
-    return player_count - 1, player_count - 1
+        return 3
+    return player_count - 1
 
 
 class WerewolfGame:
@@ -84,14 +75,13 @@ class WerewolfGame:
         self.log: list[str] = []
 
         self.inspect_candidates: list[int] = []
-        self.company_must_choose_inspector: bool = False
         self.neutral_index: int = 0
         self.neutral_order: list[int] = []
 
         self.pending_attack: PendingAttack | None = None
         self.pending_defense_player: int | None = None
         self.last_wrong_attacker: int | None = None
-        self.company_may_forensics: bool = False
+        self.digital_forensics_available: bool = False
 
         self.vote_active: bool = False
         self.vote_target: int | None = None
@@ -105,7 +95,7 @@ class WerewolfGame:
 
     def _setup(self) -> None:
         n = self.config.player_count
-        vuln_n, company_cards_n = company_scale(n)
+        vuln_n = vuln_scale(n)
         roles = roll_roles(n, self.rng)
 
         names = [self.config.human_name] + [f"Bot {i}" for i in range(1, n)]
@@ -120,15 +110,7 @@ class WerewolfGame:
 
         self.deck = build_main_deck(self.rng)
 
-        company_pids = [p.pid for p in self.players if p.role == Role.COMPANY]
-        for pid in company_pids:
-            p = self.players[pid]
-            for _ in range(company_cards_n):
-                p.hand.append(self.rng.choice(COMPANY_POOL))
-
         for p in self.players:
-            if p.role == Role.COMPANY:
-                continue
             self._draw_cards(p, 3)
 
         self._log(f"Game {self.id[:8]} — {n} players. Roles assigned secretly.")
@@ -181,25 +163,17 @@ class WerewolfGame:
     def _begin_inspect_phase(self) -> None:
         self.phase = Phase.DAY_INSPECT
         self.inspect_candidates = [
-            p.pid
-            for p in self.living_players()
-            if NEUTRAL_INSPECT in p.hand and p.role != Role.COMPANY
+            p.pid for p in self.living_players() if NEUTRAL_INSPECT in p.hand
         ]
-        company_alive = any(p.role == Role.COMPANY and not p.eliminated for p in self.players)
-        if len(self.inspect_candidates) > 1 and company_alive:
-            self.company_must_choose_inspector = True
-            self._log("Multiple Inspect cards — Company must choose who inspects.")
+        if len(self.inspect_candidates) > 1:
+            pick = self.rng.choice(self.inspect_candidates)
+            self._log("Multiple Inspect cards — one inspector is chosen at random.")
+            self._perform_inspect(pick)
         elif len(self.inspect_candidates) == 1:
             self._perform_inspect(self.inspect_candidates[0])
         else:
-            if any(
-                NEUTRAL_INSPECT in p.hand and p.role == Role.COMPANY for p in self.living_players()
-            ):
-                cp = next(p.pid for p in self.living_players() if p.role == Role.COMPANY)
-                self._perform_inspect(cp)
-            else:
-                self._log("No Inspect plays today.")
-                self._begin_neutral_phase()
+            self._log("No Inspect plays today.")
+            self._begin_neutral_phase()
 
     def _perform_inspect(self, pid: int) -> None:
         player = self.players[pid]
@@ -219,9 +193,8 @@ class WerewolfGame:
             v.public = False
             self._log(
                 f"{player.name} inspects a vulnerability: {v.kind} "
-                f"(known to them, Company, and that role)."
+                f"(known to their role)."
             )
-        self.company_must_choose_inspector = False
         self.inspect_candidates.clear()
         self._begin_neutral_phase()
 
@@ -239,14 +212,14 @@ class WerewolfGame:
         self.phase = Phase.NIGHT_BLACK
         self.pending_attack = None
         self.pending_defense_player = None
-        self.company_may_forensics = False
+        self.digital_forensics_available = False
         blacks = [
             p.pid
             for p in self.living_players()
             if p.role == Role.BLACK_HAT
         ]
         self.night_black_actor = blacks[0] if blacks else None
-        self._log("Night falls. Company sleeps.")
+        self._log("Night falls.")
         if self.night_black_actor is not None:
             self._log(f"{self.players[self.night_black_actor].name} acts for Black hats.")
         else:
@@ -273,7 +246,7 @@ class WerewolfGame:
         black_alive = any(p.role == Role.BLACK_HAT and not p.eliminated for p in self.players)
 
         if resolved > half:
-            self.winner = "Company & White hats (majority of vulnerabilities resolved)"
+            self.winner = "White hats (majority of vulnerabilities resolved)"
             self.phase = Phase.GAME_OVER
             return
         if exploited > half:
@@ -281,7 +254,7 @@ class WerewolfGame:
             self.phase = Phase.GAME_OVER
             return
         if not black_alive:
-            self.winner = "Company & White hats (Black hats eliminated)"
+            self.winner = "White hats (Black hats eliminated)"
             self.phase = Phase.GAME_OVER
             return
         if not white_alive:
@@ -292,17 +265,6 @@ class WerewolfGame:
         kind = action.get("type")
         if self.phase == Phase.GAME_OVER:
             return False, "Game is over."
-
-        if kind == "company_pick_inspector":
-            if self.phase != Phase.DAY_INSPECT or not self.company_must_choose_inspector:
-                return False, "Company is not choosing an inspector now."
-            target = int(action["target_pid"])
-            if target not in self.inspect_candidates:
-                return False, "Invalid inspector."
-            if self.players[pid].role != Role.COMPANY:
-                return False, "Only Company may choose."
-            self._perform_inspect(target)
-            return True, "Inspector chosen."
 
         if kind == "discard_down":
             slots = {p for p, _ in self.needs_discard}
@@ -405,7 +367,7 @@ class WerewolfGame:
             known = [v for v in self.vulnerabilities if v.status != "hidden"]
             if known:
                 v = known[0]
-                self._log(f"Tell me more: Company must share detail on {v.kind}.")
+                self._log(f"Tell me more: defenders must share detail on {v.kind}.")
             else:
                 self._log("Tell me more fizzles — no discovered vulnerability.")
         elif card == NEUTRAL_IM_OUT:
@@ -506,10 +468,10 @@ class WerewolfGame:
             wrong = card != OFF_ZERO_DAYS and (expected is None or card != expected)
             if wrong:
                 self.last_wrong_attacker = pid
-                self.company_may_forensics = True
+                self.digital_forensics_available = True
                 self._log(
                     f"{pl.name} attacks the wrong vulnerability — new vulnerability added; "
-                    "Company may use Digital Forensics."
+                    "a White hat may use Digital Forensics."
                 )
                 extra_kind = self.rng.choice(list(VULNERABILITY_TYPES))
                 self.vulnerabilities.append(
@@ -648,18 +610,26 @@ class WerewolfGame:
 
     def _forensics(self, pid: int) -> tuple[bool, str]:
         pl = self.players[pid]
-        if pl.role != Role.COMPANY:
-            return False, "Only Company."
-        if not self.company_may_forensics or NEUTRAL_DIGITAL_FORENSICS not in pl.hand:
+        if pl.role != Role.WHITE_HAT:
+            return False, "Only a White hat may play Digital Forensics."
+        if not self.digital_forensics_available or NEUTRAL_DIGITAL_FORENSICS not in pl.hand:
             return False, "Forensics unavailable."
         if self.last_wrong_attacker is None:
             return False, "No culprit tracked."
         pl.hand.remove(NEUTRAL_DIGITAL_FORENSICS)
         self.discard.append(NEUTRAL_DIGITAL_FORENSICS)
         name = self.players[self.last_wrong_attacker].name
-        self._log(f"Company uses Digital Forensics — attacker was {name}.")
-        self.company_may_forensics = False
+        self._log(f"{pl.name} uses Digital Forensics — attacker was {name}.")
+        self.digital_forensics_available = False
         return True, "Forensics used."
+
+    def _player_sees_vuln_kind(self, viewer: Player, v: Vulnerability) -> bool:
+        if v.discovered_by is None:
+            return False
+        if v.discovered_by == viewer.pid:
+            return True
+        discoverer = self.players[v.discovered_by]
+        return discoverer.role == viewer.role
 
     def _finish_night(self) -> None:
         self.night_black_actor = None
@@ -676,28 +646,12 @@ class WerewolfGame:
         hp = self.players[human_pid]
         vulns_out = []
         for v in self.vulnerabilities:
-            if hp.role == Role.COMPANY:
-                reveal = v.status != "hidden"
-                vulns_out.append(
-                    {
-                        "id": v.vid,
-                        "kind": v.kind if reveal else "?",
-                        "status": v.status,
-                    }
-                )
-            else:
-                you_inspected = v.discovered_by == human_pid
-                show_kind = you_inspected or v.public or v.status in (
-                    "resolved",
-                    "exploited",
-                )
-                vulns_out.append(
-                    {
-                        "id": v.vid,
-                        "kind": v.kind if show_kind else "?",
-                        "status": v.status,
-                    }
-                )
+            vulns_out.append(
+                {
+                    "id": v.vid,
+                    "kind": v.kind if self._player_sees_vuln_kind(hp, v) else "?",
+                }
+            )
 
         players_out = []
         for p in self.players:
@@ -710,6 +664,10 @@ class WerewolfGame:
             if p.pid == human_pid:
                 entry["role"] = p.role.value
                 entry["hand"] = list(p.hand)
+            elif p.role == hp.role:
+                entry["role"] = p.role.value
+                entry["same_role"] = True
+                entry["hand_count"] = len(p.hand)
             else:
                 entry["role"] = "hidden"
                 entry["hand_count"] = len(p.hand)
@@ -727,13 +685,11 @@ class WerewolfGame:
             "needs_discard": [
                 {"pid": p, "amount": n} for p, n in self.needs_discard
             ],
-            "company_must_choose_inspector": self.company_must_choose_inspector,
-            "inspect_candidates": list(self.inspect_candidates),
             "neutral_turn": self.neutral_order[self.neutral_index]
             if self.phase == Phase.DAY_NEUTRAL and self.neutral_index < len(self.neutral_order)
             else None,
             "pending_attack": copy.deepcopy(self.pending_attack.__dict__) if self.pending_attack else None,
-            "company_may_forensics": self.company_may_forensics,
+            "digital_forensics_available": self.digital_forensics_available,
             "vote_active": self.vote_active,
             "vote_target": self.vote_target,
             "night_black_actor": self.night_black_actor,

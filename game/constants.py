@@ -6,13 +6,12 @@ from enum import Enum
 
 
 class Role(str, Enum):
-    COMPANY = "company"
     WHITE_HAT = "white_hat"
     BLACK_HAT = "black_hat"
     GRAY_HAT = "gray_hat"
 
 
-# Board vulnerability categories (company must protect these).
+# Board vulnerability categories.
 VULNERABILITY_TYPES = (
     "Weak password",
     "Untrained Employees",
@@ -92,14 +91,5 @@ VULN_TO_DEFENSE: dict[str, str] = {
 }
 
 ATTACK_TO_VULN = {v: k for k, v in VULN_TO_ATTACK.items()}
-
-# Company-only starter cards (Inspect / Digital Forensics / mix)
-COMPANY_POOL = (
-    NEUTRAL_INSPECT,
-    NEUTRAL_DIGITAL_FORENSICS,
-    NEUTRAL_INSPECT,
-    NEUTRAL_DIGITAL_FORENSICS,
-    NEUTRAL_INSPECT,
-)
 
 MAX_HAND = 6

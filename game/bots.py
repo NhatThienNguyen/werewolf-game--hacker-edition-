@@ -46,17 +46,18 @@ def choose_bot_action(game: WerewolfGame, human_pid: int) -> tuple[int, dict[str
         pl = game.players[pid]
         return pid, {"type": "discard_down", "indices": _pick_discard_indices(len(pl.hand), need, rng)}
 
-    if game.phase == Phase.DAY_INSPECT and game.company_must_choose_inspector:
-        company = next(p for p in game.players if p.role == Role.COMPANY and not p.eliminated)
-        if company.pid == human_pid:
-            return None
-        pick = rng.choice(game.inspect_candidates)
-        return company.pid, {"type": "company_pick_inspector", "target_pid": pick}
-
-    if game.phase == Phase.DAY_DISCUSSION and game.company_may_forensics:
-        company = next(p for p in game.players if p.role == Role.COMPANY and not p.eliminated)
-        if company.pid != human_pid and NEUTRAL_DIGITAL_FORENSICS in company.hand:
-            return company.pid, {"type": "forensics"}
+    if game.phase == Phase.DAY_DISCUSSION and game.digital_forensics_available:
+        candidates = [
+            p
+            for p in game.players
+            if p.role == Role.WHITE_HAT
+            and not p.eliminated
+            and NEUTRAL_DIGITAL_FORENSICS in p.hand
+        ]
+        bots = [p for p in candidates if p.pid != human_pid]
+        if bots:
+            pick = rng.choice(bots)
+            return pick.pid, {"type": "forensics"}
 
     nt = _neutral_turn_pid(game)
     if nt is not None:

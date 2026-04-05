@@ -81,7 +81,6 @@ function renderVulns(rows) {
       el("tr", {}, [
         el("td", {}, [String(v.id)]),
         el("td", { class: "mono" }, [v.kind]),
-        el("td", {}, [v.status]),
       ])
     );
   });
@@ -91,10 +90,16 @@ function renderPlayers(players, you) {
   const ul = document.getElementById("g-players");
   ul.innerHTML = "";
   players.forEach((p) => {
-    const roleText = p.pid === you ? p.role : "hidden";
+    let roleText;
+    if (p.pid === you) {
+      roleText = p.role;
+    } else if (p.same_role) {
+      roleText = `${p.role} (same role)`;
+    } else {
+      roleText = "hidden";
+    }
     const cardsText = p.pid === you ? `${(p.hand || []).length} cards` : `${p.hand_count ?? "?"} cards`;
-    const label =
-      p.pid === you ? `${p.name} (you) — ${roleText} · ${cardsText}` : `${p.name} — ${roleText} · ${cardsText}`;
+    const label = `${p.name}${p.pid === you ? " (you)" : ""} — ${roleText} · ${cardsText}`;
     ul.appendChild(el("li", {}, [p.eliminated ? `${label} · eliminated` : label]));
   });
 }
@@ -163,27 +168,6 @@ function renderActions(s) {
     return;
   }
 
-  if (s.company_must_choose_inspector && s.players[you].role === "company") {
-    const box = el("div", { class: "block" });
-    box.appendChild(el("p", {}, ["Choose which player with Inspect may inspect a vulnerability."]));
-    const sel = el("select", { id: "pick-inspector" });
-    (s.inspect_candidates || []).forEach((pid) => {
-      const name = s.players[pid].name;
-      sel.appendChild(el("option", { value: String(pid) }, [`${name} (#${pid})`]));
-    });
-    box.appendChild(sel);
-    const btn = el("button", {}, ["Confirm"]);
-    btn.addEventListener("click", async () => {
-      await send({
-        type: "company_pick_inspector",
-        target_pid: Number(sel.value),
-      });
-    });
-    box.appendChild(btn);
-    push([box]);
-    return;
-  }
-
   if (s.phase === "day_neutral" && s.neutral_turn === you) {
     const hand = s.players[you].hand || [];
     const neutrals = hand.filter((c) => NEUTRAL_CARDS.has(c));
@@ -228,15 +212,14 @@ function renderActions(s) {
   if (s.phase === "day_discussion") {
     const box = el("div", { class: "block" });
     box.appendChild(el("p", {}, ["Discussion — end the day when you are ready."]));
-    if (s.company_may_forensics && s.players[you].role === "company") {
-      box.appendChild(
-        el("button", {}, [
-          "Use Digital Forensics (wrong attack tracked)",
-        ])
-      );
-      box.querySelector("button").addEventListener("click", async () => {
+    if (s.digital_forensics_available && s.players[you].role === "white_hat") {
+      const fb = el("button", { type: "button" }, [
+        "Use Digital Forensics (wrong attack tracked)",
+      ]);
+      fb.addEventListener("click", async () => {
         await send({ type: "forensics" });
       });
+      box.appendChild(fb);
     }
     box.appendChild(
       el("button", { class: "secondary" }, [
