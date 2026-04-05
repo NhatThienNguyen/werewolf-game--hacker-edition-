@@ -1,15 +1,193 @@
 :root {
-  font-family: system-ui, sans-serif;
-  background: #0f1419;
-  color: #e6edf3;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  background: #0b1020;
+  color: #e8ecf1;
+  line-height: 1.45;
 }
 
 body {
   margin: 0;
-  padding: 1rem;
+}
+
+.top {
+  padding: 1.25rem 1.5rem;
+  background: linear-gradient(120deg, #121a33, #0b1020);
+  border-bottom: 1px solid #243055;
+}
+
+.top h1 {
+  margin: 0 0 0.25rem;
+  font-size: 1.5rem;
+}
+
+.tagline {
+  margin: 0;
+  color: #9fb0d2;
+  font-size: 0.95rem;
 }
 
 #app {
-  max-width: 960px;
+  max-width: 1000px;
   margin: 0 auto;
+  padding: 1rem 1.25rem 2rem;
+}
+
+.panel {
+  background: #12182b;
+  border: 1px solid #243055;
+  border-radius: 10px;
+  padding: 1rem 1.1rem;
+  margin-bottom: 1rem;
+}
+
+.panel h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.1rem;
+  color: #c9d7f5;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+}
+
+label {
+  display: block;
+  margin-bottom: 0.75rem;
+  color: #b9c7e6;
+  font-size: 0.95rem;
+}
+
+input[type="text"],
+input[type="number"],
+select {
+  display: block;
+  margin-top: 0.35rem;
+  width: 100%;
+  max-width: 320px;
+  padding: 0.45rem 0.55rem;
+  border-radius: 6px;
+  border: 1px solid #33446e;
+  background: #0f1528;
+  color: #e8ecf1;
+}
+
+button {
+  cursor: pointer;
+  border: 1px solid #3c5a9e;
+  background: #2a498a;
+  color: #f2f5ff;
+  padding: 0.5rem 0.85rem;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+button.secondary {
+  background: #1e2a4a;
+  border-color: #33446e;
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.error {
+  color: #ffb4b4;
+  margin-top: 0.75rem;
+}
+
+.hint {
+  color: #9fb0d2;
+  font-size: 0.9rem;
+  margin: 0.35rem 0 0;
+}
+
+.label {
+  color: #8fa6cf;
+  margin-right: 0.35rem;
+}
+
+.cards {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.cards li {
+  background: #1c2744;
+  border: 1px solid #33446e;
+  border-radius: 8px;
+  padding: 0.35rem 0.55rem;
+  font-size: 0.9rem;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.table th,
+.table td {
+  border-bottom: 1px solid #243055;
+  padding: 0.45rem 0.35rem;
+  text-align: left;
+}
+
+.players {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.players li {
+  padding: 0.35rem 0;
+  border-bottom: 1px solid #1e2a4a;
+}
+
+.log {
+  max-height: 280px;
+  overflow: auto;
+  padding-left: 1.2rem;
+  margin: 0;
+  color: #c9d7e9;
+  font-size: 0.92rem;
+}
+
+.win {
+  color: #9ef3c0;
+  font-weight: 700;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.actions .block {
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #1e2a4a;
+}
+
+.actions .block:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.88rem;
 }

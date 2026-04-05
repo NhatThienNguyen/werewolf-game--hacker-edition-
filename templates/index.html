@@ -7,10 +7,78 @@
     <link rel="stylesheet" href="/static/css/style.css" />
   </head>
   <body>
-    <div id="app">
+    <header class="top">
       <h1>Werewolf — Hacker Edition</h1>
-      <p>Loading…</p>
-    </div>
+      <p class="tagline">Local browser game · you vs. bots · roles randomized each match</p>
+    </header>
+
+    <main id="app">
+      <section id="lobby" class="panel">
+        <h2>New game</h2>
+        <label>
+          Your name
+          <input type="text" id="player-name" value="You" maxlength="32" />
+        </label>
+        <label>
+          Players (including you, 3–12)
+          <input type="number" id="player-count" min="3" max="12" value="5" />
+        </label>
+        <button type="button" id="btn-new-game">Start game</button>
+        <p id="lobby-error" class="error" hidden></p>
+      </section>
+
+      <section id="game" class="hidden">
+        <div class="grid">
+          <div class="panel">
+            <h2>Status</h2>
+            <p><span class="label">Round</span> <span id="g-round"></span></p>
+            <p><span class="label">Phase</span> <span id="g-phase"></span></p>
+            <p><span class="label">Your role</span> <span id="g-role"></span></p>
+            <p id="g-winner" class="win hidden"></p>
+          </div>
+          <div class="panel">
+            <h2>Your hand</h2>
+            <ul id="g-hand" class="cards"></ul>
+            <p class="hint">Maximum 6 cards — discard extras when prompted.</p>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>Vulnerabilities</h2>
+          <table class="table" id="g-vulns">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Type</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div class="panel">
+          <h2>Players</h2>
+          <ul id="g-players" class="players"></ul>
+        </div>
+
+        <div class="panel actions">
+          <h2>Actions</h2>
+          <div id="actions-root"></div>
+        </div>
+
+        <div class="panel">
+          <h2>Log</h2>
+          <ol id="g-log" class="log"></ol>
+        </div>
+
+        <div class="panel row">
+          <button type="button" id="btn-refresh">Refresh state</button>
+          <button type="button" id="btn-restart">New game (same settings)</button>
+        </div>
+      </section>
+    </main>
+
     <script src="/static/js/game.js"></script>
   </body>
 </html>
