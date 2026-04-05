@@ -368,11 +368,7 @@ class WerewolfGame:
             return self._night_gray_action(pid, action)
 
         if kind == "forensics":
-            if self.phase not in (
-                Phase.DAY_DISCUSSION,
-                Phase.DAY_VOTE,
-                Phase.DAY_NEUTRAL,
-            ):
+            if self.phase not in (Phase.DAY_DISCUSSION, Phase.DAY_VOTE):
                 return False, "Digital Forensics can be played during the day."
             return self._forensics(pid)
 
@@ -747,6 +743,7 @@ class WerewolfGame:
             "vote_active": self.vote_active,
             "vote_target": self.vote_target,
             "night_black_actor": self.night_black_actor,
+            "pending_defense_player": self.pending_defense_player,
         }
 
 

@@ -11,6 +11,7 @@ from .constants import (
     NEUTRAL_INSPECT,
     OFFENSIVE_CARDS,
     OFF_ZERO_DAYS,
+    Role,
     VULN_TO_ATTACK,
     VULN_TO_DEFENSE,
 )
@@ -22,6 +23,14 @@ def _pick_discard_indices(hand_len: int, need: int, rng: random.Random) -> list[
     idx = list(range(hand_len))
     rng.shuffle(idx)
     return sorted(idx[:need], reverse=True)
+
+
+def _neutral_turn_pid(game: WerewolfGame) -> int | None:
+    if game.phase != Phase.DAY_NEUTRAL:
+        return None
+    if game.neutral_index >= len(game.neutral_order):
+        return None
+    return game.neutral_order[game.neutral_index]
 
 
 def choose_bot_action(game: WerewolfGame, human_pid: int) -> tuple[int, dict[str, Any]] | None:
@@ -49,8 +58,9 @@ def choose_bot_action(game: WerewolfGame, human_pid: int) -> tuple[int, dict[str
         if company.pid != human_pid and NEUTRAL_DIGITAL_FORENSICS in company.hand:
             return company.pid, {"type": "forensics"}
 
-    if game.phase == Phase.DAY_NEUTRAL and game.neutral_turn is not None:
-        pid = game.neutral_turn
+    nt = _neutral_turn_pid(game)
+    if nt is not None:
+        pid = nt
         if pid == human_pid:
             return None
         pl = game.players[pid]
